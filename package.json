@@ -1,11 +1,18 @@
-
 {
-    "name": "chat-app",
-    "version": "1.0.0",
-    "main": "app.js",
-    "dependencies": {
-      "express": "^4.18.2",
-      "socket.io": "^4.5.4"
-    }
-  }
-  
+  "name": "chat-app",
+  "version": "1.0.0",
+  "description": "CEEYIT Real-time Chat Application",
+  "main": "app.js",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.5.4"
+  },
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 0"
+  },
+  "keywords": ["chat", "socket.io", "nodejs"],
+  "author": "CEEYIT Student",
+  "license": "MIT"
+}

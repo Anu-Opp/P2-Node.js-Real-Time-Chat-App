@@ -1,0 +1,15 @@
+#!/bin/bash
+echo "==================================="
+echo "NODEJS CHAT PROJECT STRUCTURE"
+echo "==================================="
+tree -a -I '.git|node_modules' . 2>/dev/null || find . -type f -name ".*" -prune -o -type f -print | grep -v node_modules | sort
+echo ""
+echo "==================================="
+echo "NEXT STEPS:"
+echo "==================================="
+echo "1. Update variables.tf with your AWS key pair name"
+echo "2. Run: cd nodejs-chat-terraform && terraform apply"
+echo "3. Update ansible-config/inventory with EC2 IP"
+echo "4. Run: cd ansible-config && ansible-playbook playbook.yml"
+echo "5. Deploy app manually or set up Jenkins CI/CD"
+echo "==================================="

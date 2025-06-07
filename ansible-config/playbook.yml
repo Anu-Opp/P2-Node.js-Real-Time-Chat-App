@@ -1,0 +1,207 @@
+---
+- name: Configure Node.js Chat Application Server
+  hosts: chat_servers
+  become: yes
+  vars:
+    app_dir: /opt/chat-app
+    app_user: nodejs
+    node_version: "18"
+    
+  tasks:
+    - name: Update system packages
+      yum:
+        name: "*"
+        state: latest
+        update_cache: yes
+
+    - name: Install EPEL repository
+      yum:
+        name: epel-release
+        state: present
+
+    - name: Install required packages
+      yum:
+        name: 
+          - curl
+          - wget
+          - git
+          - firewalld
+        state: present
+
+    - name: Install NodeSource repository
+      shell: |
+        curl -fsSL https://rpm.nodesource.com/setup_{{ node_version }}.x | bash -
+      args:
+        creates: /etc/yum.repos.d/nodesource-el7.repo
+
+    - name: Install Node.js and npm
+      yum:
+        name: nodejs
+        state: present
+
+    - name: Verify Node.js installation
+      command: node --version
+      register: node_version_output
+      changed_when: false
+
+    - name: Display Node.js version
+      debug:
+        msg: "Node.js version: {{ node_version_output.stdout }}"
+
+    - name: Install Nginx
+      yum:
+        name: nginx
+        state: present
+
+    - name: Create application user
+      user:
+        name: "{{ app_user }}"
+        system: yes
+        shell: /bin/bash
+        home: /home/{{ app_user }}
+        create_home: yes
+
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Install PM2 globally
+      npm:
+        name: pm2
+        global: yes
+        state: present
+
+    - name: Remove default Nginx config
+      file:
+        path: /etc/nginx/nginx.conf
+        state: absent
+
+    - name: Create new Nginx main config
+      copy:
+        content: |
+          user nginx;
+          worker_processes auto;
+          error_log /var/log/nginx/error.log;
+          pid /run/nginx.pid;
+
+          events {
+              worker_connections 1024;
+          }
+
+          http {
+              log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                                '$status $body_bytes_sent "$http_referer" '
+                                '"$http_user_agent" "$http_x_forwarded_for"';
+
+              access_log  /var/log/nginx/access.log  main;
+
+              sendfile            on;
+              tcp_nopush          on;
+              tcp_nodelay         on;
+              keepalive_timeout   65;
+              types_hash_max_size 2048;
+
+              include             /etc/nginx/mime.types;
+              default_type        application/octet-stream;
+
+              include /etc/nginx/conf.d/*.conf;
+          }
+        dest: /etc/nginx/nginx.conf
+        mode: '0644'
+      notify: restart nginx
+
+    - name: Configure Nginx for chat app
+      copy:
+        content: |
+          server {
+              listen 80;
+              server_name _;
+
+              location / {
+                  proxy_pass http://localhost:3000;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_cache_bypass $http_upgrade;
+                  proxy_connect_timeout 60s;
+                  proxy_send_timeout 60s;
+                  proxy_read_timeout 60s;
+              }
+
+              location /health {
+                  proxy_pass http://localhost:3000/health;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+        dest: /etc/nginx/conf.d/chat-app.conf
+        mode: '0644'
+      notify: restart nginx
+
+    - name: Start and enable firewalld
+      systemd:
+        name: firewalld
+        state: started
+        enabled: yes
+
+    - name: Open firewall for HTTP
+      firewalld:
+        service: http
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+    - name: Open firewall for HTTPS
+      firewalld:
+        service: https
+        permanent: yes
+        state: enabled
+        immediate: yes
+
+    - name: Start and enable Nginx
+      systemd:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Create PM2 ecosystem file
+      copy:
+        content: |
+          module.exports = {
+            apps: [{
+              name: 'chat-app',
+              script: 'app.js',
+              cwd: '{{ app_dir }}',
+              instances: 1,
+              exec_mode: 'fork',
+              watch: false,
+              max_memory_restart: '1G',
+              env: {
+                NODE_ENV: 'production',
+                PORT: 3000
+              },
+              error_file: '/var/log/chat-app-error.log',
+              out_file: '/var/log/chat-app-out.log',
+              log_file: '/var/log/chat-app.log'
+            }]
+          };
+        dest: "{{ app_dir }}/ecosystem.config.js"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+
+  handlers:
+    - name: restart nginx
+      systemd:
+        name: nginx
+        state: restarted
