@@ -1,4 +1,3 @@
-cat > index.html << 'EOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,7 +13,7 @@ cat > index.html << 'EOF'
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #ffc0cb 0%, #ffb3d1 100%);
+            background: linear-gradient(135deg, #ffe4e1 0%, #fdd2d7 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -493,7 +492,7 @@ cat > index.html << 'EOF'
                             resolve();
                         };
                         script3.onerror = () => {
-                            console.error('💥 All Socket.IO loading methods failed');
+                            console.error('�� All Socket.IO loading methods failed');
                             reject(new Error('Could not load Socket.IO'));
                         };
                         document.head.appendChild(script3);
@@ -780,7 +779,7 @@ cat > index.html << 'EOF'
                 console.log('✅ Message added to DOM successfully');
                 
             } catch (error) {
-                console.error('💥 Error adding message to DOM:', error);
+                console.error('�� Error adding message to DOM:', error);
             }
         }
 
@@ -874,4 +873,3 @@ cat > index.html << 'EOF'
     </script>
 </body>
 </html>
-EOF
