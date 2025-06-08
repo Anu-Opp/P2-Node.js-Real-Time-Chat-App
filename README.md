@@ -1,4 +1,4 @@
-# CEEYIT Real-Time Chat Application
+# U-connect Real-Time Chat Application
 
 [![Build Status](https://jenkins.example.com/buildStatus/icon?job=chat-app)](https://jenkins.example.com/job/chat-app/)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
