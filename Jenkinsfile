@@ -3,16 +3,18 @@ pipeline {
     
     environment {
         AWS_REGION = 'us-east-1'
-        EC2_HOST = 'REPLACE_WITH_EC2_IP'  // Update this after Terraform apply
-        SSH_KEY = credentials('ec2-ssh-key')  // Configure in Jenkins
+        EC2_HOST = '3.212.184.245'
+        SSH_KEY = credentials('ec2-ssh-key')
         APP_DIR = '/opt/chat-app'
+        APP_NAME = 'chat-app'
     }
     
     stages {
         stage('Checkout') {
             steps {
                 echo 'Checking out source code...'
-                checkout scm
+                // checkout scm  // Uncomment when using Git
+                sh 'echo "✅ Source code ready"'
             }
         }
         
@@ -33,51 +35,35 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building application...'
-                sh 'echo "Build completed - Node.js app ready for deployment"'
+                sh 'echo "✅ Build completed"'
             }
         }
         
         stage('Deploy to EC2') {
             steps {
-                echo 'Deploying to EC2 server...'
+                echo 'Deploying U-connect chat app to EC2...'
                 script {
                     sh '''
-                        # Create deployment directory on remote server
-                        ssh -o StrictHostKeyChecking=no -i $SSH_KEY ec2-user@$EC2_HOST '
-                            sudo mkdir -p /tmp/app-deployment
-                            sudo chown ec2-user:ec2-user /tmp/app-deployment
-                        '
+                        # Create deployment directory
+                        ssh -o StrictHostKeyChecking=no -i $SSH_KEY ec2-user@$EC2_HOST "sudo mkdir -p /tmp/app-deployment && sudo chown ec2-user:ec2-user /tmp/app-deployment"
                         
-                        # Copy application files
+                        # Copy files
                         scp -o StrictHostKeyChecking=no -i $SSH_KEY -r ./* ec2-user@$EC2_HOST:/tmp/app-deployment/
                         
-                        # Deploy and restart application
-                        ssh -o StrictHostKeyChecking=no -i $SSH_KEY ec2-user@$EC2_HOST '
-                            # Stop existing application
-                            sudo -u nodejs pm2 stop chat-app || true
-                            
-                            # Backup current application
+                        # Deploy
+                        ssh -o StrictHostKeyChecking=no -i $SSH_KEY ec2-user@$EC2_HOST "
+                            sudo -u nodejs pm2 stop $APP_NAME || true
                             sudo cp -r $APP_DIR $APP_DIR.backup.$(date +%Y%m%d_%H%M%S) || true
-                            
-                            # Copy new application files
                             sudo cp -r /tmp/app-deployment/* $APP_DIR/
                             sudo chown -R nodejs:nodejs $APP_DIR
-                            
-                            # Install dependencies
                             cd $APP_DIR
                             sudo -u nodejs npm install --production
-                            
-                            # Start application with PM2
                             sudo -u nodejs pm2 start ecosystem.config.js
                             sudo -u nodejs pm2 save
-                            
-                            # Verify application is running
                             sleep 5
                             sudo -u nodejs pm2 status
-                            
-                            # Clean up deployment files
                             rm -rf /tmp/app-deployment
-                        '
+                        "
                     '''
                 }
             }
@@ -88,12 +74,10 @@ pipeline {
                 echo 'Performing health check...'
                 script {
                     sh '''
-                        # Wait for application to be ready
-                        sleep 10
-                        
-                        # Check if application is responding
+                        sleep 15
                         curl -f http://$EC2_HOST/health || exit 1
-                        echo "Health check passed!"
+                        curl -f http://$EC2_HOST || exit 1
+                        echo "✅ U-connect app is healthy!"
                     '''
                 }
             }
@@ -102,23 +86,13 @@ pipeline {
     
     post {
         success {
-            echo 'Deployment completed successfully!'
-            slackSend(
-                channel: '#deployments', 
-                color: 'good', 
-                message: "✅ Chat App deployed successfully to ${env.EC2_HOST}"
-            )
+            echo '🎉 U-connect deployment completed successfully!'
+            echo "🌐 App: http://${env.EC2_HOST}"
         }
         failure {
-            echo 'Deployment failed!'
-            slackSend(
-                channel: '#deployments', 
-                color: 'danger', 
-                message: "❌ Chat App deployment failed on ${env.EC2_HOST}"
-            )
+            echo '❌ Deployment failed!'
         }
         always {
-            echo 'Cleaning up workspace...'
             cleanWs()
         }
     }
