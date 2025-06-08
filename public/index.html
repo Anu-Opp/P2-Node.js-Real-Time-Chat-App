@@ -1,3 +1,4 @@
+cat > index.html << 'EOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -85,6 +86,7 @@
             overflow-y: auto;
             padding: 20px;
             scroll-behavior: smooth;
+            background: #fafafa;
         }
         
         .message {
@@ -94,6 +96,7 @@
             max-width: 70%;
             word-wrap: break-word;
             animation: messageSlide 0.3s ease-out;
+            clear: both;
         }
         
         @keyframes messageSlide {
@@ -112,13 +115,16 @@
             color: white;
             margin-left: auto;
             border-bottom-right-radius: 5px;
+            float: right;
         }
         
         .message.other {
-            background: #f1f5f9;
+            background: #ffffff;
             color: #334155;
             margin-right: auto;
             border-bottom-left-radius: 5px;
+            border: 1px solid #e2e8f0;
+            float: left;
         }
         
         .message.system {
@@ -129,6 +135,7 @@
             margin: 10px auto;
             border-radius: 20px;
             max-width: 80%;
+            float: none;
         }
         
         .message-header {
@@ -147,6 +154,11 @@
             font-size: 0.75em;
             opacity: 0.7;
             margin-left: auto;
+        }
+        
+        .message-content {
+            word-wrap: break-word;
+            line-height: 1.4;
         }
         
         .typing-indicator {
@@ -325,6 +337,13 @@
             box-shadow: 0 5px 15px rgba(255, 192, 203, 0.5);
         }
         
+        .loading-message {
+            text-align: center;
+            padding: 20px;
+            color: #ff69b4;
+            font-style: italic;
+        }
+        
         @media (max-width: 768px) {
             .app-container {
                 height: 100vh;
@@ -397,7 +416,9 @@
 
         <!-- Chat Area -->
         <div class="chat-area">
-            <div class="messages-container" id="messagesContainer"></div>
+            <div class="messages-container" id="messagesContainer">
+                <div class="loading-message">Loading chat... 💬</div>
+            </div>
             
             <div class="typing-indicator" id="typingIndicator"></div>
             
@@ -437,10 +458,52 @@
         <span onclick="insertEmoji('🌈')">🌈</span>
     </div>
 
-    <!-- Socket.IO -->
-    <script src="/socket.io/socket.io.js"></script>
-    
+    <!-- Try multiple ways to load Socket.IO -->
     <script>
+        console.log('🔧 Loading Socket.IO...');
+        
+        // Load Socket.IO with fallback methods
+        function loadSocketIO() {
+            return new Promise((resolve, reject) => {
+                // Method 1: Try the standard Socket.IO endpoint
+                const script1 = document.createElement('script');
+                script1.src = '/socket.io/socket.io.js';
+                script1.onload = () => {
+                    console.log('✅ Socket.IO loaded from /socket.io/socket.io.js');
+                    resolve();
+                };
+                script1.onerror = () => {
+                    console.log('❌ Failed to load from /socket.io/socket.io.js, trying local copy...');
+                    
+                    // Method 2: Try local copy
+                    const script2 = document.createElement('script');
+                    script2.src = '/socket.io.js';
+                    script2.onload = () => {
+                        console.log('✅ Socket.IO loaded from local copy');
+                        resolve();
+                    };
+                    script2.onerror = () => {
+                        console.log('❌ Failed to load local copy, trying CDN...');
+                        
+                        // Method 3: Try CDN
+                        const script3 = document.createElement('script');
+                        script3.src = 'https://cdn.socket.io/4.5.4/socket.io.min.js';
+                        script3.onload = () => {
+                            console.log('✅ Socket.IO loaded from CDN');
+                            resolve();
+                        };
+                        script3.onerror = () => {
+                            console.error('💥 All Socket.IO loading methods failed');
+                            reject(new Error('Could not load Socket.IO'));
+                        };
+                        document.head.appendChild(script3);
+                    };
+                    document.head.appendChild(script2);
+                };
+                document.head.appendChild(script1);
+            });
+        }
+
         // Global variables
         let socket;
         let currentUser = null;
@@ -450,12 +513,19 @@
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('App initialized');
+            console.log('🚀 App initialized');
             initializeEventListeners();
+            
+            // Load Socket.IO first
+            loadSocketIO().catch(error => {
+                console.error('💥 Could not load Socket.IO:', error);
+                document.getElementById('connectionStatus').textContent = 'Failed to load Socket.IO';
+                document.getElementById('connectionStatus').style.color = '#ef4444';
+            });
         });
 
         function initializeEventListeners() {
-            // Avatar selection with better event handling
+            // Avatar selection
             document.querySelectorAll('.avatar-option').forEach(option => {
                 option.addEventListener('click', function(e) {
                     e.preventDefault();
@@ -464,10 +534,9 @@
                     document.querySelectorAll('.avatar-option').forEach(opt => opt.classList.remove('selected'));
                     this.classList.add('selected');
                     selectedAvatar = this.dataset.avatar;
-                    console.log('Avatar selected:', selectedAvatar);
+                    console.log('✅ Avatar selected:', selectedAvatar);
                 });
                 
-                // Add touch support
                 option.addEventListener('touchend', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -536,164 +605,251 @@
                 color: '#ffc0cb'
             };
 
-            console.log('Joining chat with user:', currentUser);
+            console.log('🎯 Joining chat with user:', currentUser);
             document.getElementById('welcomeModal').style.display = 'none';
+            
+            // Clear loading message
+            document.getElementById('messagesContainer').innerHTML = '';
+            
             initializeSocket();
         }
 
         function initializeSocket() {
-            console.log('Initializing socket connection...');
-            socket = io({
-                transports: ['websocket', 'polling'],
-                timeout: 20000,
-                forceNew: true
-            });
-
-            socket.on('connect', () => {
-                console.log('Connected to server');
-                document.getElementById('connectionStatus').textContent = 'Connected';
-                document.getElementById('connectionStatus').style.color = '#4ade80';
+            console.log('🔌 Initializing socket connection...');
+            
+            // Check if Socket.IO is available
+            if (typeof io === 'undefined') {
+                console.error('💥 Socket.IO not available. Retrying...');
+                document.getElementById('connectionStatus').textContent = 'Loading Socket.IO...';
                 
-                // Join the chat
-                socket.emit('user join', currentUser);
-            });
+                // Retry after a short delay
+                setTimeout(() => {
+                    if (typeof io !== 'undefined') {
+                        initializeSocket();
+                    } else {
+                        console.error('💥 Socket.IO still not available');
+                        document.getElementById('connectionStatus').textContent = 'Socket.IO Load Failed';
+                        document.getElementById('connectionStatus').style.color = '#ef4444';
+                    }
+                }, 2000);
+                return;
+            }
+            
+            try {
+                socket = io({
+                    transports: ['websocket', 'polling'],
+                    timeout: 20000,
+                    forceNew: true
+                });
 
-            socket.on('disconnect', () => {
-                console.log('Disconnected from server');
-                document.getElementById('connectionStatus').textContent = 'Disconnected';
+                socket.on('connect', () => {
+                    console.log('✅ Connected to server, Socket ID:', socket.id);
+                    document.getElementById('connectionStatus').textContent = 'Connected';
+                    document.getElementById('connectionStatus').style.color = '#4ade80';
+                    
+                    // Join the chat
+                    console.log('📝 Emitting user join event');
+                    socket.emit('user join', currentUser);
+                });
+
+                socket.on('disconnect', () => {
+                    console.log('❌ Disconnected from server');
+                    document.getElementById('connectionStatus').textContent = 'Disconnected';
+                    document.getElementById('connectionStatus').style.color = '#ef4444';
+                });
+
+                socket.on('connect_error', (error) => {
+                    console.error('💥 Connection error:', error);
+                    document.getElementById('connectionStatus').textContent = 'Connection Error';
+                    document.getElementById('connectionStatus').style.color = '#ef4444';
+                });
+
+                socket.on('user count', (data) => {
+                    console.log('👥 User count update:', data);
+                    const countText = data.count === 1 ? '1 user online' : `${data.count} users online`;
+                    document.getElementById('userCount').textContent = countText;
+                });
+
+                socket.on('welcome message', (data) => {
+                    console.log('👋 Welcome message:', data);
+                    addSystemMessage(data.message);
+                });
+
+                socket.on('user joined', (data) => {
+                    console.log('🆕 User joined:', data);
+                    addSystemMessage(data.message);
+                });
+
+                socket.on('user left', (data) => {
+                    console.log('👋 User left:', data);
+                    addSystemMessage(data.message);
+                });
+
+                socket.on('chat message', (data) => {
+                    console.log('💬 Received chat message:', data);
+                    addMessage(data);
+                });
+
+                socket.on('user typing', (data) => {
+                    console.log('⌨️ User typing:', data);
+                    showTypingIndicator(data);
+                });
+
+                socket.on('user stop typing', (data) => {
+                    console.log('⏹️ User stop typing:', data);
+                    hideTypingIndicator(data);
+                });
+                
+            } catch (error) {
+                console.error('💥 Error initializing socket:', error);
+                document.getElementById('connectionStatus').textContent = 'Failed to connect';
                 document.getElementById('connectionStatus').style.color = '#ef4444';
-            });
-
-            socket.on('connect_error', (error) => {
-                console.error('Connection error:', error);
-                document.getElementById('connectionStatus').textContent = 'Connection Error';
-                document.getElementById('connectionStatus').style.color = '#ef4444';
-            });
-
-            socket.on('user count', (data) => {
-                const countText = data.count === 1 ? '1 user online' : `${data.count} users online`;
-                document.getElementById('userCount').textContent = countText;
-            });
-
-            socket.on('welcome message', (data) => {
-                addSystemMessage(data.message);
-            });
-
-            socket.on('user joined', (data) => {
-                addSystemMessage(data.message);
-            });
-
-            socket.on('user left', (data) => {
-                addSystemMessage(data.message);
-            });
-
-            socket.on('chat message', (data) => {
-                addMessage(data);
-            });
-
-            socket.on('user typing', (data) => {
-                showTypingIndicator(data);
-            });
-
-            socket.on('user stop typing', (data) => {
-                hideTypingIndicator(data);
-            });
+            }
         }
 
         function sendMessage() {
             const messageInput = document.getElementById('messageInput');
             const message = messageInput.value.trim();
             
-            if (!message) return;
+            if (!message) {
+                console.log('⚠️ Empty message, not sending');
+                return;
+            }
             
             if (!socket || !socket.connected) {
+                console.error('❌ Socket not connected');
                 alert('Not connected to server. Please refresh the page.');
                 return;
             }
 
-            console.log('Sending message:', message);
-            socket.emit('chat message', { message: message });
-            messageInput.value = '';
-            messageInput.style.height = '45px';
+            console.log('📤 Sending message:', message);
             
-            // Stop typing indicator
-            isTyping = false;
-            socket.emit('typing stop');
+            try {
+                socket.emit('chat message', { message: message });
+                messageInput.value = '';
+                messageInput.style.height = '45px';
+                
+                // Stop typing indicator
+                isTyping = false;
+                socket.emit('typing stop');
+                
+                console.log('✅ Message sent successfully');
+            } catch (error) {
+                console.error('💥 Error sending message:', error);
+            }
         }
 
         function addMessage(data) {
-            const messagesContainer = document.getElementById('messagesContainer');
-            const messageDiv = document.createElement('div');
+            console.log('🎨 Adding message to DOM:', data);
             
-            const isOwnMessage = data.username === currentUser.username;
-            messageDiv.className = `message ${isOwnMessage ? 'own' : 'other'}`;
-            
-            const time = new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            if (!isOwnMessage) {
-                messageDiv.innerHTML = `
-                    <div class="message-header">
-                        <span class="message-avatar">${data.avatar}</span>
-                        <span class="message-username" style="color: ${data.color}">${escapeHtml(data.username)}</span>
-                        <span class="message-time">${time}</span>
-                    </div>
-                    <div>${escapeHtml(data.message)}</div>
-                `;
-            } else {
-                messageDiv.innerHTML = `
-                    <div class="message-header">
-                        <span class="message-time">${time}</span>
-                    </div>
-                    <div>${escapeHtml(data.message)}</div>
-                `;
+            try {
+                const messagesContainer = document.getElementById('messagesContainer');
+                if (!messagesContainer) {
+                    console.error('❌ Messages container not found');
+                    return;
+                }
+                
+                const messageDiv = document.createElement('div');
+                
+                const isOwnMessage = data.username === currentUser.username;
+                messageDiv.className = `message ${isOwnMessage ? 'own' : 'other'}`;
+                
+                const time = new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                if (!isOwnMessage) {
+                    messageDiv.innerHTML = `
+                        <div class="message-header">
+                            <span class="message-avatar">${data.avatar}</span>
+                            <span class="message-username" style="color: ${data.color}">${escapeHtml(data.username)}</span>
+                            <span class="message-time">${time}</span>
+                        </div>
+                        <div class="message-content">${escapeHtml(data.message)}</div>
+                    `;
+                } else {
+                    messageDiv.innerHTML = `
+                        <div class="message-header">
+                            <span class="message-time">${time}</span>
+                        </div>
+                        <div class="message-content">${escapeHtml(data.message)}</div>
+                    `;
+                }
+                
+                messagesContainer.appendChild(messageDiv);
+                scrollToBottom();
+                
+                console.log('✅ Message added to DOM successfully');
+                
+            } catch (error) {
+                console.error('💥 Error adding message to DOM:', error);
             }
-            
-            messagesContainer.appendChild(messageDiv);
-            scrollToBottom();
         }
 
         function addSystemMessage(message) {
-            const messagesContainer = document.getElementById('messagesContainer');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message system';
-            messageDiv.textContent = message;
+            console.log('📢 Adding system message:', message);
             
-            messagesContainer.appendChild(messageDiv);
-            scrollToBottom();
+            try {
+                const messagesContainer = document.getElementById('messagesContainer');
+                if (!messagesContainer) {
+                    console.error('❌ Messages container not found');
+                    return;
+                }
+                
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message system';
+                messageDiv.textContent = message;
+                
+                messagesContainer.appendChild(messageDiv);
+                scrollToBottom();
+                
+                console.log('✅ System message added successfully');
+                
+            } catch (error) {
+                console.error('💥 Error adding system message:', error);
+            }
         }
 
         function showTypingIndicator(data) {
             const indicator = document.getElementById('typingIndicator');
-            indicator.textContent = `${data.avatar} ${data.username} is typing...`;
+            if (indicator) {
+                indicator.textContent = `${data.avatar} ${data.username} is typing...`;
+            }
         }
 
         function hideTypingIndicator(data) {
             const indicator = document.getElementById('typingIndicator');
-            indicator.textContent = '';
+            if (indicator) {
+                indicator.textContent = '';
+            }
         }
 
         function scrollToBottom() {
             const container = document.getElementById('messagesContainer');
-            container.scrollTop = container.scrollHeight;
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
         }
 
         function toggleEmojiPicker() {
             const picker = document.getElementById('emojiPicker');
-            picker.classList.toggle('show');
+            if (picker) {
+                picker.classList.toggle('show');
+            }
         }
 
         function insertEmoji(emoji) {
             const input = document.getElementById('messageInput');
-            const start = input.selectionStart;
-            const end = input.selectionEnd;
-            const text = input.value;
-            
-            input.value = text.substring(0, start) + emoji + text.substring(end);
-            input.selectionStart = input.selectionEnd = start + emoji.length;
-            input.focus();
-            
-            // Close emoji picker
-            document.getElementById('emojiPicker').classList.remove('show');
+            if (input) {
+                const start = input.selectionStart;
+                const end = input.selectionEnd;
+                const text = input.value;
+                
+                input.value = text.substring(0, start) + emoji + text.substring(end);
+                input.selectionStart = input.selectionEnd = start + emoji.length;
+                input.focus();
+                
+                // Close emoji picker
+                document.getElementById('emojiPicker').classList.remove('show');
+            }
         }
 
         function escapeHtml(unsafe) {
@@ -706,11 +862,16 @@
         }
 
         // Debug function
-        window.debugSocket = function() {
+        window.debugChat = function() {
+            console.log('=== CHAT DEBUG INFO ===');
+            console.log('Socket.IO available:', typeof io !== 'undefined');
             console.log('Socket connected:', socket?.connected);
-            console.log('Current user:', currentUser);
             console.log('Socket ID:', socket?.id);
+            console.log('Current user:', currentUser);
+            console.log('Messages container:', document.getElementById('messagesContainer'));
+            console.log('Message count:', document.querySelectorAll('.message').length);
         };
     </script>
 </body>
 </html>
+EOF
