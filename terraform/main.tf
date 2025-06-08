@@ -127,3 +127,63 @@ resource "aws_eip" "chat_eip" {
     Name = "chat-app-eip"
   }
 }
+
+# Jenkins Server
+resource "aws_instance" "jenkins_server" {
+  ami                    = "ami-0c02fb55956c7d316" # Amazon Linux 2
+  instance_type          = "t2.medium"
+  key_name               = var.key_name
+  vpc_security_group_ids = [aws_security_group.jenkins_sg.id]
+  subnet_id              = aws_subnet.chat_public_subnet.id
+
+  user_data = <<-EOF
+              #!/bin/bash
+              yum update -y
+              yum install -y git java-11-openjdk
+              EOF
+
+  tags = {
+    Name = "jenkins-server"
+  }
+}
+
+# Jenkins Security Group
+resource "aws_security_group" "jenkins_sg" {
+  name_prefix = "jenkins-sg"
+  vpc_id      = aws_vpc.chat_vpc.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "jenkins-security-group"
+  }
+}
+
+# Jenkins Elastic IP
+resource "aws_eip" "jenkins_eip" {
+  instance = aws_instance.jenkins_server.id
+  domain   = "vpc"
+  
+  tags = {
+    Name = "jenkins-eip"
+  }
+}

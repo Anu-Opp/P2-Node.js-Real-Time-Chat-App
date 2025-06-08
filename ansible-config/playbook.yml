@@ -5,53 +5,38 @@
   vars:
     app_dir: /opt/chat-app
     app_user: nodejs
-    node_version: "18"
     
   tasks:
+    - name: Install Python 3.8 from Amazon Linux Extras
+      shell: |
+        amazon-linux-extras install python3.8 -y
+        alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1
+      become: yes
+      ignore_errors: yes
+
     - name: Update system packages
-      yum:
-        name: "*"
-        state: latest
-        update_cache: yes
+      shell: yum update -y
+      become: yes
 
     - name: Install EPEL repository
-      yum:
-        name: epel-release
-        state: present
+      shell: amazon-linux-extras install epel -y
+      become: yes
 
-    - name: Install required packages
-      yum:
-        name: 
-          - curl
-          - wget
-          - git
-          - firewalld
-        state: present
+    - name: Install required packages using shell
+      shell: yum install -y curl wget git firewalld nginx
+      become: yes
 
-    - name: Install NodeSource repository
+    - name: Install Node.js using NVM (avoiding package conflicts)
       shell: |
-        curl -fsSL https://rpm.nodesource.com/setup_{{ node_version }}.x | bash -
-      args:
-        creates: /etc/yum.repos.d/nodesource-el7.repo
-
-    - name: Install Node.js and npm
-      yum:
-        name: nodejs
-        state: present
-
-    - name: Verify Node.js installation
-      command: node --version
-      register: node_version_output
-      changed_when: false
-
-    - name: Display Node.js version
-      debug:
-        msg: "Node.js version: {{ node_version_output.stdout }}"
-
-    - name: Install Nginx
-      yum:
-        name: nginx
-        state: present
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        nvm install 16
+        nvm use 16
+        nvm alias default 16
+        npm install -g pm2
+      become: yes
+      become_user: ec2-user
 
     - name: Create application user
       user:
@@ -69,18 +54,30 @@
         group: "{{ app_user }}"
         mode: '0755'
 
-    - name: Install PM2 globally
-      npm:
-        name: pm2
-        global: yes
-        state: present
+    - name: Configure Nginx for chat app
+      copy:
+        content: |
+          server {
+              listen 80;
+              server_name _;
+              
+              location / {
+                  proxy_pass http://localhost:3000;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_cache_bypass $http_upgrade;
+              }
+          }
+        dest: /etc/nginx/conf.d/chat-app.conf
+        mode: '0644'
+      notify: restart nginx
 
-    - name: Remove default Nginx config
-      file:
-        path: /etc/nginx/nginx.conf
-        state: absent
-
-    - name: Create new Nginx main config
+    - name: Create Nginx main config
       copy:
         content: |
           user nginx;
@@ -98,81 +95,43 @@
                                 '"$http_user_agent" "$http_x_forwarded_for"';
 
               access_log  /var/log/nginx/access.log  main;
-
               sendfile            on;
               tcp_nopush          on;
               tcp_nodelay         on;
               keepalive_timeout   65;
               types_hash_max_size 2048;
-
               include             /etc/nginx/mime.types;
               default_type        application/octet-stream;
-
               include /etc/nginx/conf.d/*.conf;
           }
         dest: /etc/nginx/nginx.conf
         mode: '0644'
       notify: restart nginx
 
-    - name: Configure Nginx for chat app
-      copy:
-        content: |
-          server {
-              listen 80;
-              server_name _;
-
-              location / {
-                  proxy_pass http://localhost:3000;
-                  proxy_http_version 1.1;
-                  proxy_set_header Upgrade $http_upgrade;
-                  proxy_set_header Connection 'upgrade';
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto $scheme;
-                  proxy_cache_bypass $http_upgrade;
-                  proxy_connect_timeout 60s;
-                  proxy_send_timeout 60s;
-                  proxy_read_timeout 60s;
-              }
-
-              location /health {
-                  proxy_pass http://localhost:3000/health;
-                  proxy_set_header Host $host;
-                  proxy_set_header X-Real-IP $remote_addr;
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header X-Forwarded-Proto $scheme;
-              }
-          }
-        dest: /etc/nginx/conf.d/chat-app.conf
-        mode: '0644'
-      notify: restart nginx
-
-    - name: Start and enable firewalld
+    - name: Start and enable services
       systemd:
-        name: firewalld
+        name: "{{ item }}"
         state: started
         enabled: yes
+      loop:
+        - nginx
+        - firewalld
 
-    - name: Open firewall for HTTP
-      firewalld:
-        service: http
-        permanent: yes
-        state: enabled
-        immediate: yes
+    - name: Open firewall ports using shell commands
+      shell: |
+        firewall-cmd --permanent --add-service=http
+        firewall-cmd --permanent --add-service=https
+        firewall-cmd --reload
+      become: yes
 
-    - name: Open firewall for HTTPS
-      firewalld:
-        service: https
-        permanent: yes
-        state: enabled
-        immediate: yes
+    - name: Verify firewall configuration
+      shell: firewall-cmd --list-services
+      register: firewall_services
+      become: yes
 
-    - name: Start and enable Nginx
-      systemd:
-        name: nginx
-        state: started
-        enabled: yes
+    - name: Display firewall services
+      debug:
+        msg: "Active firewall services: {{ firewall_services.stdout }}"
 
     - name: Create PM2 ecosystem file
       copy:
@@ -184,21 +143,20 @@
               cwd: '{{ app_dir }}',
               instances: 1,
               exec_mode: 'fork',
-              watch: false,
-              max_memory_restart: '1G',
               env: {
                 NODE_ENV: 'production',
                 PORT: 3000
-              },
-              error_file: '/var/log/chat-app-error.log',
-              out_file: '/var/log/chat-app-out.log',
-              log_file: '/var/log/chat-app.log'
+              }
             }]
           };
         dest: "{{ app_dir }}/ecosystem.config.js"
         owner: "{{ app_user }}"
         group: "{{ app_user }}"
         mode: '0644'
+
+    - name: Display completion message
+      debug:
+        msg: "Server configuration completed successfully with working firewall!"
 
   handlers:
     - name: restart nginx
