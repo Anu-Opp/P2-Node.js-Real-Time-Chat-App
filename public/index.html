@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>U-connect - Fun Chat!</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -14,16 +13,12 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #ffc0cb 0%, #ffb3d1 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s ease;
-        }
-        
-        body.dark-mode {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            touch-action: manipulation;
         }
         
         .app-container {
@@ -33,58 +28,21 @@
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .dark-mode .app-container {
-            background: rgba(30, 30, 30, 0.95);
-            color: white;
         }
         
         .header {
-            background: linear-gradient(45deg, #667eea, #764ba2);
+            background: linear-gradient(45deg, #ffc0cb, #ffb3d1);
             color: white;
             padding: 20px;
             text-align: center;
-            position: relative;
         }
         
         .header h1 {
             font-size: 2em;
             margin-bottom: 5px;
-            animation: glow 2s ease-in-out infinite alternate;
-        }
-        
-        @keyframes glow {
-            from { text-shadow: 0 0 5px rgba(255,255,255,0.5); }
-            to { text-shadow: 0 0 20px rgba(255,255,255,0.8); }
-        }
-        
-        .header-controls {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            gap: 10px;
-        }
-        
-        .btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
         }
         
         .status-bar {
@@ -105,7 +63,7 @@
         .status-indicator {
             width: 10px;
             height: 10px;
-            background: #4ade80;
+            background: #ff69b4;
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
@@ -136,7 +94,6 @@
             max-width: 70%;
             word-wrap: break-word;
             animation: messageSlide 0.3s ease-out;
-            position: relative;
         }
         
         @keyframes messageSlide {
@@ -151,7 +108,7 @@
         }
         
         .message.own {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #ffc0cb, #ffb3d1);
             color: white;
             margin-left: auto;
             border-bottom-right-radius: 5px;
@@ -164,14 +121,9 @@
             border-bottom-left-radius: 5px;
         }
         
-        .dark-mode .message.other {
-            background: #374151;
-            color: #e5e7eb;
-        }
-        
         .message.system {
-            background: rgba(59, 130, 246, 0.1);
-            color: #3b82f6;
+            background: rgba(255, 192, 203, 0.2);
+            color: #ff69b4;
             text-align: center;
             font-style: italic;
             margin: 10px auto;
@@ -185,10 +137,6 @@
             gap: 8px;
             margin-bottom: 5px;
             font-size: 0.85em;
-        }
-        
-        .message-avatar {
-            font-size: 1.2em;
         }
         
         .message-username {
@@ -206,42 +154,12 @@
             font-style: italic;
             color: #6b7280;
             min-height: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .typing-dots {
-            display: inline-flex;
-            gap: 2px;
-        }
-        
-        .typing-dot {
-            width: 4px;
-            height: 4px;
-            background: #6b7280;
-            border-radius: 50%;
-            animation: typingBounce 1.4s infinite ease-in-out;
-        }
-        
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        .typing-dot:nth-child(3) { animation-delay: 0s; }
-        
-        @keyframes typingBounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
         }
         
         .input-area {
             padding: 20px;
             background: rgba(0, 0, 0, 0.02);
             border-top: 1px solid rgba(0, 0, 0, 0.1);
-        }
-        
-        .dark-mode .input-area {
-            background: rgba(255, 255, 255, 0.02);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .input-container {
@@ -260,23 +178,16 @@
             resize: none;
             max-height: 100px;
             min-height: 45px;
-            transition: all 0.3s ease;
             background: white;
         }
         
-        .dark-mode .message-input {
-            background: #374151;
-            border-color: #4b5563;
-            color: white;
-        }
-        
         .message-input:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #ffc0cb;
+            box-shadow: 0 0 0 3px rgba(255, 192, 203, 0.3);
         }
         
-        .send-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+        .send-btn, .emoji-btn {
+            background: linear-gradient(135deg, #ffc0cb, #ffb3d1);
             color: white;
             border: none;
             width: 45px;
@@ -288,35 +199,19 @@
             justify-content: center;
             transition: all 0.3s ease;
             font-size: 1.1em;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
         
-        .send-btn:hover {
+        .send-btn:hover, .emoji-btn:hover,
+        .send-btn:active, .emoji-btn:active {
             transform: scale(1.1);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        
-        .emoji-btn {
-            background: #f8fafc;
-            border: 2px solid #e2e8f0;
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2em;
-            transition: all 0.3s ease;
-        }
-        
-        .dark-mode .emoji-btn {
-            background: #374151;
-            border-color: #4b5563;
+            box-shadow: 0 5px 15px rgba(255, 192, 203, 0.5);
         }
         
         .emoji-picker {
-            position: absolute;
-            bottom: 80px;
+            position: fixed;
+            bottom: 100px;
             right: 20px;
             background: white;
             border-radius: 15px;
@@ -326,10 +221,7 @@
             grid-template-columns: repeat(6, 1fr);
             gap: 8px;
             z-index: 1000;
-        }
-        
-        .dark-mode .emoji-picker {
-            background: #374151;
+            max-width: 300px;
         }
         
         .emoji-picker.show {
@@ -339,13 +231,17 @@
         .emoji-picker span {
             font-size: 1.5em;
             cursor: pointer;
-            padding: 5px;
+            padding: 8px;
             border-radius: 8px;
             transition: all 0.2s ease;
+            text-align: center;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
         
-        .emoji-picker span:hover {
-            background: rgba(102, 126, 234, 0.1);
+        .emoji-picker span:hover,
+        .emoji-picker span:active {
+            background: rgba(255, 192, 203, 0.3);
             transform: scale(1.2);
         }
         
@@ -371,11 +267,6 @@
             width: 90%;
         }
         
-        .dark-mode .welcome-content {
-            background: #1f2937;
-            color: white;
-        }
-        
         .user-setup {
             display: flex;
             flex-direction: column;
@@ -388,12 +279,6 @@
             border-radius: 10px;
             outline: none;
             font-size: 16px;
-        }
-        
-        .dark-mode .username-input {
-            background: #374151;
-            border-color: #4b5563;
-            color: white;
         }
         
         .avatar-selection {
@@ -410,16 +295,19 @@
             border-radius: 10px;
             cursor: pointer;
             transition: all 0.2s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
         
         .avatar-option:hover,
+        .avatar-option:active,
         .avatar-option.selected {
-            border-color: #667eea;
-            background: rgba(102, 126, 234, 0.1);
+            border-color: #ffc0cb;
+            background: rgba(255, 192, 203, 0.3);
         }
         
         .join-btn {
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #ffc0cb, #ffb3d1);
             color: white;
             border: none;
             padding: 12px 30px;
@@ -427,11 +315,14 @@
             font-size: 16px;
             cursor: pointer;
             transition: all 0.3s ease;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
         
-        .join-btn:hover {
+        .join-btn:hover,
+        .join-btn:active {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 5px 15px rgba(255, 192, 203, 0.5);
         }
         
         @media (max-width: 768px) {
@@ -441,12 +332,15 @@
                 max-width: 100%;
             }
             
-            .header h1 {
-                font-size: 1.5em;
-            }
-            
             .message {
                 max-width: 85%;
+            }
+            
+            .emoji-picker {
+                bottom: 80px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
             }
         }
     </style>
@@ -476,7 +370,7 @@
                 </div>
                 
                 <button class="join-btn" onclick="joinChat()">
-                    <i class="fas fa-rocket"></i> Join the Fun!
+                    🚀 Join the Fun!
                 </button>
             </div>
         </div>
@@ -486,15 +380,7 @@
     <div class="app-container">
         <!-- Header -->
         <div class="header">
-            <div class="header-controls">
-                <button class="btn" onclick="toggleDarkMode()" title="Toggle Dark Mode">
-                    <i class="fas fa-moon" id="modeIcon"></i>
-                </button>
-                <button class="btn" onclick="toggleSound()" title="Toggle Sound">
-                    <i class="fas fa-volume-up" id="soundIcon"></i>
-                </button>
-            </div>
-            <h1><i class="fas fa-comments"></i> U-connect</h1>
+            <h1>💬 U-connect</h1>
             <p>Real-time fun chat experience!</p>
         </div>
 
@@ -517,8 +403,8 @@
             
             <div class="input-area">
                 <div class="input-container">
-                    <button class="emoji-btn" onclick="toggleEmojiPicker()">
-                        <i class="fas fa-smile"></i>
+                    <button class="emoji-btn" onclick="toggleEmojiPicker()" type="button">
+                        😊
                     </button>
                     <textarea 
                         class="message-input" 
@@ -527,8 +413,8 @@
                         rows="1"
                         maxlength="500"
                     ></textarea>
-                    <button class="send-btn" onclick="sendMessage()">
-                        <i class="fas fa-paper-plane"></i>
+                    <button class="send-btn" onclick="sendMessage()" type="button">
+                        ➤
                     </button>
                 </div>
             </div>
@@ -558,24 +444,34 @@
         // Global variables
         let socket;
         let currentUser = null;
-        let isDarkMode = false;
-        let soundEnabled = true;
         let typingTimeout;
         let isTyping = false;
         let selectedAvatar = '😊';
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('App initialized');
             initializeEventListeners();
         });
 
         function initializeEventListeners() {
-            // Avatar selection
+            // Avatar selection with better event handling
             document.querySelectorAll('.avatar-option').forEach(option => {
-                option.addEventListener('click', function() {
+                option.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
                     document.querySelectorAll('.avatar-option').forEach(opt => opt.classList.remove('selected'));
                     this.classList.add('selected');
                     selectedAvatar = this.dataset.avatar;
+                    console.log('Avatar selected:', selectedAvatar);
+                });
+                
+                // Add touch support
+                option.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.click();
                 });
             });
 
@@ -587,7 +483,7 @@
                     sendMessage();
                 }
                 
-                if (!isTyping) {
+                if (!isTyping && socket && socket.connected) {
                     isTyping = true;
                     socket.emit('typing start');
                 }
@@ -595,7 +491,9 @@
                 clearTimeout(typingTimeout);
                 typingTimeout = setTimeout(() => {
                     isTyping = false;
-                    socket.emit('typing stop');
+                    if (socket && socket.connected) {
+                        socket.emit('typing stop');
+                    }
                 }, 1000);
             });
 
@@ -608,7 +506,18 @@
             // Username input enter key
             document.getElementById('usernameInput').addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
+                    e.preventDefault();
                     joinChat();
+                }
+            });
+            
+            // Close emoji picker when clicking outside
+            document.addEventListener('click', function(e) {
+                const emojiPicker = document.getElementById('emojiPicker');
+                const emojiBtn = document.querySelector('.emoji-btn');
+                
+                if (!emojiPicker.contains(e.target) && !emojiBtn.contains(e.target)) {
+                    emojiPicker.classList.remove('show');
                 }
             });
         }
@@ -617,25 +526,33 @@
             const username = document.getElementById('usernameInput').value.trim();
             if (!username) {
                 alert('Please enter a username!');
+                document.getElementById('usernameInput').focus();
                 return;
             }
 
             currentUser = {
                 username: username,
                 avatar: selectedAvatar,
-                color: '#667eea'
+                color: '#ffc0cb'
             };
 
+            console.log('Joining chat with user:', currentUser);
             document.getElementById('welcomeModal').style.display = 'none';
             initializeSocket();
         }
 
         function initializeSocket() {
-            socket = io();
+            console.log('Initializing socket connection...');
+            socket = io({
+                transports: ['websocket', 'polling'],
+                timeout: 20000,
+                forceNew: true
+            });
 
             socket.on('connect', () => {
                 console.log('Connected to server');
                 document.getElementById('connectionStatus').textContent = 'Connected';
+                document.getElementById('connectionStatus').style.color = '#4ade80';
                 
                 // Join the chat
                 socket.emit('user join', currentUser);
@@ -644,6 +561,13 @@
             socket.on('disconnect', () => {
                 console.log('Disconnected from server');
                 document.getElementById('connectionStatus').textContent = 'Disconnected';
+                document.getElementById('connectionStatus').style.color = '#ef4444';
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('Connection error:', error);
+                document.getElementById('connectionStatus').textContent = 'Connection Error';
+                document.getElementById('connectionStatus').style.color = '#ef4444';
             });
 
             socket.on('user count', (data) => {
@@ -657,12 +581,10 @@
 
             socket.on('user joined', (data) => {
                 addSystemMessage(data.message);
-                updateUserCount(data.userCount);
             });
 
             socket.on('user left', (data) => {
                 addSystemMessage(data.message);
-                updateUserCount(data.userCount);
             });
 
             socket.on('chat message', (data) => {
@@ -683,7 +605,13 @@
             const message = messageInput.value.trim();
             
             if (!message) return;
+            
+            if (!socket || !socket.connected) {
+                alert('Not connected to server. Please refresh the page.');
+                return;
+            }
 
+            console.log('Sending message:', message);
             socket.emit('chat message', { message: message });
             messageInput.value = '';
             messageInput.style.height = '45px';
@@ -706,7 +634,7 @@
                 messageDiv.innerHTML = `
                     <div class="message-header">
                         <span class="message-avatar">${data.avatar}</span>
-                        <span class="message-username" style="color: ${data.color}">${data.username}</span>
+                        <span class="message-username" style="color: ${data.color}">${escapeHtml(data.username)}</span>
                         <span class="message-time">${time}</span>
                     </div>
                     <div>${escapeHtml(data.message)}</div>
@@ -736,4 +664,53 @@
 
         function showTypingIndicator(data) {
             const indicator = document.getElementById('typingIndicator');
-            indicator.innerHTML = `
+            indicator.textContent = `${data.avatar} ${data.username} is typing...`;
+        }
+
+        function hideTypingIndicator(data) {
+            const indicator = document.getElementById('typingIndicator');
+            indicator.textContent = '';
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('messagesContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function toggleEmojiPicker() {
+            const picker = document.getElementById('emojiPicker');
+            picker.classList.toggle('show');
+        }
+
+        function insertEmoji(emoji) {
+            const input = document.getElementById('messageInput');
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            const text = input.value;
+            
+            input.value = text.substring(0, start) + emoji + text.substring(end);
+            input.selectionStart = input.selectionEnd = start + emoji.length;
+            input.focus();
+            
+            // Close emoji picker
+            document.getElementById('emojiPicker').classList.remove('show');
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Debug function
+        window.debugSocket = function() {
+            console.log('Socket connected:', socket?.connected);
+            console.log('Current user:', currentUser);
+            console.log('Socket ID:', socket?.id);
+        };
+    </script>
+</body>
+</html>
